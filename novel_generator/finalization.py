@@ -89,7 +89,8 @@ def finalize_chapter(
             embedding_model_name
         ),
         new_chapter=chapter_text,
-        filepath=filepath
+        filepath=filepath,
+        timeout_seconds=timeout
     )
 
     logging.info(f"Chapter {novel_number} has been finalized.")

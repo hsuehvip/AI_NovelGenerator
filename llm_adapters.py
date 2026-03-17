@@ -58,7 +58,8 @@ class DeepSeekAdapter(BaseLLMAdapter):
             base_url=self.base_url,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            timeout=self.timeout
+            timeout=timeout,
+            request_timeout=timeout
         )
 
     def invoke(self, prompt: str) -> str:
@@ -86,7 +87,8 @@ class OpenAIAdapter(BaseLLMAdapter):
             base_url=self.base_url,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            timeout=self.timeout
+            timeout=timeout,
+            request_timeout=timeout
         )
 
     def invoke(self, prompt: str) -> str:
@@ -116,6 +118,9 @@ class GeminiAdapter(BaseLLMAdapter):
         self._model = genai.GenerativeModel(model_name=self.model_name)
 
     def invoke(self, prompt: str) -> str:
+        from google.api_core import timeout as google_timeout
+        from google.api_core.exceptions import GatewayTimeout, ServiceUnavailable
+        
         try:
             # 设置生成配置
             generation_config = genai.types.GenerationConfig(
@@ -123,10 +128,12 @@ class GeminiAdapter(BaseLLMAdapter):
                 temperature=self.temperature,
             )
             
-            # 生成内容
+            client_timeout = google_timeout.ConstantTimeout(self.timeout) if self.timeout else None
+            
             response = self._model.generate_content(
                 prompt,
-                generation_config=generation_config
+                generation_config=generation_config,
+                request_options={"timeout": self.timeout} if self.timeout else {}
             )
             
             if response and response.text:
@@ -134,6 +141,9 @@ class GeminiAdapter(BaseLLMAdapter):
             else:
                 logging.warning("No text response from Gemini API.")
                 return ""
+        except (GatewayTimeout, ServiceUnavailable) as e:
+            logging.error(f"Gemini API 调用超时: {e}")
+            return ""
         except Exception as e:
             logging.error(f"Gemini API 调用失败: {e}")
             return ""
@@ -196,7 +206,8 @@ class OllamaAdapter(BaseLLMAdapter):
             base_url=self.base_url,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            timeout=self.timeout
+            timeout=timeout,
+            request_timeout=timeout
         )
 
     def invoke(self, prompt: str) -> str:
@@ -221,7 +232,8 @@ class MLStudioAdapter(BaseLLMAdapter):
             base_url=self.base_url,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            timeout=self.timeout
+            timeout=timeout,
+            request_timeout=timeout
         )
 
     def invoke(self, prompt: str) -> str:

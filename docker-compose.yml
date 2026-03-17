@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  novel-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: novel-generator
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    shm_size: 4gb
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 2G

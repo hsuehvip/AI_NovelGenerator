@@ -49,7 +49,7 @@ def clear_vector_store(filepath: str) -> bool:
         traceback.print_exc()
         return False
 
-def init_vector_store(embedding_adapter, texts, filepath: str):
+def init_vector_store(embedding_adapter, texts, filepath: str, timeout_seconds: int = 60):
     """
     在 filepath 下创建/加载一个 Chroma 向量库并插入 texts。
     如果Embedding失败，则返回 None，不中断任务。
@@ -67,6 +67,7 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
                     func=embedding_adapter.embed_documents,
                     max_retries=3,
                     fallback_return=[],
+                    timeout_seconds=timeout_seconds,
                     texts=texts
                 )
             def embed_query(self, query: str):
@@ -74,6 +75,7 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
                     func=embedding_adapter.embed_query,
                     max_retries=3,
                     fallback_return=[],
+                    timeout_seconds=timeout_seconds,
                     query=query
                 )
                 return res
@@ -92,7 +94,7 @@ def init_vector_store(embedding_adapter, texts, filepath: str):
         traceback.print_exc()
         return None
 
-def load_vector_store(embedding_adapter, filepath: str):
+def load_vector_store(embedding_adapter, filepath: str, timeout_seconds: int = 60):
     """
     读取已存在的 Chroma 向量库。若不存在则返回 None。
     如果加载失败（embedding 或IO问题），则返回 None。
@@ -110,6 +112,7 @@ def load_vector_store(embedding_adapter, filepath: str):
                     func=embedding_adapter.embed_documents,
                     max_retries=3,
                     fallback_return=[],
+                    timeout_seconds=timeout_seconds,
                     texts=texts
                 )
             def embed_query(self, query: str):
@@ -117,6 +120,7 @@ def load_vector_store(embedding_adapter, filepath: str):
                     func=embedding_adapter.embed_query,
                     max_retries=3,
                     fallback_return=[],
+                    timeout_seconds=timeout_seconds,
                     query=query
                 )
                 return res
@@ -179,7 +183,7 @@ def split_text_for_vectorstore(chapter_text: str, max_length: int = 500, similar
     
     return final_segments
 
-def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
+def update_vector_store(embedding_adapter, new_chapter: str, filepath: str, timeout_seconds: int = 60):
     """
     将最新章节文本插入到向量库中。
     若库不存在则初始化；若初始化/更新失败，则跳过。
@@ -190,10 +194,10 @@ def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
         logging.warning("No valid text to insert into vector store. Skipping.")
         return
 
-    store = load_vector_store(embedding_adapter, filepath)
+    store = load_vector_store(embedding_adapter, filepath, timeout_seconds)
     if not store:
         logging.info("Vector store does not exist or failed to load. Initializing a new one for new chapter...")
-        store = init_vector_store(embedding_adapter, splitted_texts, filepath)
+        store = init_vector_store(embedding_adapter, splitted_texts, filepath, timeout_seconds)
         if not store:
             logging.warning("Init vector store failed, skip embedding.")
         else:
@@ -208,13 +212,13 @@ def update_vector_store(embedding_adapter, new_chapter: str, filepath: str):
         logging.warning(f"Failed to update vector store: {e}")
         traceback.print_exc()
 
-def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepath: str, k: int = 2) -> str:
+def get_relevant_context_from_vector_store(embedding_adapter, query: str, filepath: str, k: int = 2, timeout_seconds: int = 60) -> str:
     """
     从向量库中检索与 query 最相关的 k 条文本，拼接后返回。
     如果向量库加载/检索失败，则返回空字符串。
     最终只返回最多2000字符的检索片段。
     """
-    store = load_vector_store(embedding_adapter, filepath)
+    store = load_vector_store(embedding_adapter, filepath, timeout_seconds)
     if not store:
         logging.info("No vector store found or load failed. Returning empty context.")
         return ""
